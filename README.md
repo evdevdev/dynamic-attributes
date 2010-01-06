@@ -14,6 +14,13 @@ http://github.com/browsermedia/browsercms/blob/master/lib/cms/behaviors/dynamic_
  - Or even better still, fork the source and commit it yourself, then ping me.
 
 
+#### Installing
+
+Just run script/plugin from your Rails root and your done:
+
+    script/plugin install git://codaset.com/joelmoss/dynamic-attributes.git
+
+
 #### Get Started
 
 So let's say that we have a model that we use to save data about our users. But
