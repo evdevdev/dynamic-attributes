@@ -36,10 +36,8 @@ module DynamicAttributes
               
           private
               
-          alias_method :read_attribute_without_dynamic_attributes, :read_attribute
-          alias_method :read_attribute, :read_attribute_with_dynamic_attributes
-          alias_method :write_attribute_without_dynamic_attributes, :write_attribute
-          alias_method :write_attribute, :write_attribute_with_dynamic_attributes
+          alias_method_chain :read_attribute, :dynamic_attributes
+          alias_method_chain :write_attribute, :dynamic_attributes
         end
       end
     end
