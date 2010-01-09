@@ -58,6 +58,11 @@ class DynamicAttributesTest < ActiveSupport::TestCase
     assert_nil user.home_town
   end
   
+  test "attribute names are set when defining dynamic fields" do
+    user = UserAttributeWithNamedField.new
+    assert_equal({"name"=>nil, "created_at"=>nil, "updated_at"=>nil, "dynamic_attributes"=>nil, "about"=>nil, "age"=>nil, "middle_name"=>nil}, user.attributes)
+  end
+  
   test "write dynamic attributes when fields are defined" do
     user = UserAttributeWithNamedField.new :name => 'Joel Moss'
     user.about = 'stuff about me'

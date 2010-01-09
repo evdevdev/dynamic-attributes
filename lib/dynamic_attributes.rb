@@ -23,7 +23,7 @@ module DynamicAttributes
       
       define_method(self.dynamic_attributes_options[:column_name]) {
         attrs = read_attribute_without_dynamic_attributes self.dynamic_attributes_options[:column_name]
-        YAML.load(attrs).symbolize_keys!
+        attrs.nil? ? nil : YAML.load(attrs).symbolize_keys!
       }
       
       class_eval do
@@ -53,7 +53,44 @@ module DynamicAttributes
       true
     end
     
+    # This overrides the attributes= defined in ActiveRecord::Base
+    # The only difference is that this doesn't check to see if the
+    # model responds_to the method before sending it
+    def attributes=(new_attributes, guard_protected_attributes = true)
+      return if new_attributes.nil?
+      attributes = new_attributes.dup
+      attributes.stringify_keys!
+
+      multi_parameter_attributes = []
+      attributes = remove_attributes_protected_from_mass_assignment(attributes) if guard_protected_attributes
+
+      attributes.each do |k, v|
+        if k.include?("(")
+          multi_parameter_attributes << [ k, v ]
+        else
+          send(:"#{k}=", v)
+        end
+      end
+
+      assign_multiparameter_attributes(multi_parameter_attributes)
+    end
+
     private
+    
+      # We override this so we can include our defined dynamic attributes
+      def attributes_from_column_definition
+        unless dynamic_attributes_fields.empty?
+          attributes = dynamic_attributes_fields.inject({}) do |attributes, column|
+            attributes[column.to_s] = nil
+            attributes
+          end
+        end
+
+        self.class.columns.inject(attributes || {}) do |attributes, column|
+          attributes[column.name] = column.default unless column.name == self.class.primary_key
+          attributes
+        end
+      end
     
       # Called after validation on update so that dynamic attributes behave
       # like normal attributes in the fact that the database is not touched
@@ -91,8 +128,7 @@ module DynamicAttributes
             return @save_dynamic_attr[attr_name]
           else
             attrs = read_attribute_without_dynamic_attributes(dynamic_attributes_options[:column_name].to_s)
-            return nil if attrs.nil?
-            attrs = YAML.load(attrs).symbolize_keys! unless attrs.is_a? Hash
+            attrs = attrs.nil? ? nil : YAML.load(attrs).symbolize_keys! unless attrs.is_a? Hash
             return nil if attrs.blank?
             return attrs[attr_name.to_sym]
           end
@@ -110,28 +146,6 @@ module DynamicAttributes
         end
         
         write_attribute_without_dynamic_attributes(attr_name, value)
-      end
-    
-      # This overrides the attributes= defined in ActiveRecord::Base
-      # The only difference is that this doesn't check to see if the
-      # model responds_to the method before sending it
-      def attributes=(new_attributes, guard_protected_attributes = true)
-        return if new_attributes.nil?
-        attributes = new_attributes.dup
-        attributes.stringify_keys!
-
-        multi_parameter_attributes = []
-        attributes = remove_attributes_protected_from_mass_assignment(attributes) if guard_protected_attributes
-
-        attributes.each do |k, v|
-          if k.include?("(")
-            multi_parameter_attributes << [ k, v ]
-          else
-            send(:"#{k}=", v)
-          end
-        end
-
-        assign_multiparameter_attributes(multi_parameter_attributes)
       end
     
   end
